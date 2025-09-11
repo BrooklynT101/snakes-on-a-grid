@@ -1,45 +1,133 @@
-__author__ = "<your name>"
-__organization__ = "COSC343/AIML402, University of Otago"
-__email__ = "<your e-mail>"
+__author__ = "Brooklyn Taylor"
+__organization__ = "COSC343, University of Otago"
+__email__ = "taybr713@student.otago.ac.nz"
 
 import numpy as np
+from typing import List
+from datetime import datetime
 
-agentName = "<my_agent>"
+agentName = "SignlePerceptronGA"
 trainingSchedule = [("self", 1), ("random", 1)]
+# trainingSchedule = [("random", 200)]
+FORWARD = 0
+LEFT = -1
+RIGHT = 1
+FOOD = -0.5
+EMPTY = 0.0
 
-# This is the class for your snake/agent
+# -----------------------------------------------------------------------------
+# GA configuration (these values were suggested by CGPT to start with, will be adjusted later)
+# -----------------------------------------------------------------------------
+ELITISM_COUNT = 2               # Number of top snakes copied straight to next gen
+TOURNAMENT_SIZE = 3             # We pick the best of this many snakes during selection
+CROSSOVER_PROBABILITY = 0.7     # Chance we perform crossover; otherwise copy a parent
+MUTATION_PROBABILITY = 0.05     # Chance that each gene will be mutated
+MUTATION_STANDARD_DEVIATION = 0.10  # Size of the random nudge during mutation
+WEIGHT_CLIP_LIMIT = 3.0         # Keep weights within a safe range after mutation
+
+# This is to track average fitness across generations so I can plot it later
+fitness_history_csv_filename = "fitness_history.csv"
+_average_fitness_per_generation: List[float] = []
+
+# -----------------------------------------------------------------------------
+# Snake class
+# -----------------------------------------------------------------------------
 class Snake:
 
     def __init__(self, nPercepts, actions):
-        '''
-         You should initialise self.chromosome member variable here (whatever you choose it
-         to be - a list/vector/matrix of numbers - and initialise it with some random
-         values)
-        '''
-
+        # The engine will pass:
+        #   number_of_percepts = 49 (7x7 grid flattened)
+        #   actions = [-1, 0, 1]
         self.nPercepts = nPercepts
         self.actions = actions
 
+        # Define the small network shape explicitly for slef clarity
+        self.number_of_inputs = 49               # 7x7 percepts flattened
+        self.number_of_outputs = 3               # left, forward, right
+        self.number_of_weights = self.number_of_inputs * self.number_of_outputs  # 49*3 = 147
+        self.number_of_biases = self.number_of_outputs                           # 3
+        self.chromosome_length = self.number_of_weights + self.number_of_biases  # 150
 
+       # Create a random chromosome for initial behaviour (untrained) small random values to avoid extreme outputs at the start.
+       # TODO: look into gaussian mutation
+        self.chromosome = np.random.uniform(
+            low=-0.5,
+            high=0.5,
+            size=self.chromosome_length
+        ).astype(np.float32)
+
+    # -------------------------------------------------------------------------
+    # Helper to choose a local action toward the nearest food
+    # -------------------------------------------------------------------------
+    def _choose_action_towards_food(self, percepts_7x7: np.ndarray) -> int:
+        """
+        Very simple rule:
+          - Find the nearest food cell (value == -0.5) in the 7x7 view.
+          - The view is aligned to the snake's heading:
+              forward = one row UP (toward smaller row index),
+              left    = one column LEFT (toward smaller column index),
+              right   = one column RIGHT (toward larger column index).
+          - We return -1 for left, 0 for forward, 1 for right.
+
+        If there is no food in view, we simply go forward (0).
+        """
+        # Head is at the center of the 7x7 grid
+        head_row = 3
+        head_col = 3
+
+        # Find all coordinates where there is food (-0.5)
+        food_positions = np.argwhere(percepts_7x7 == -0.5)
+
+        if food_positions.size == 0:
+            # No food seen in the local 7x7 view: just keep moving forward
+            return FORWARD
+
+        # Pick the nearest food by Manhattan distance in the local percept grid 
+        distances = []
+        for (r, c) in food_positions:
+            distance = abs(r - head_row) + abs(c - head_col)
+            distances.append(distance)
+        nearest_index = int(np.argmin(distances))
+        target_row, target_col = food_positions[nearest_index]
+
+        # Decide which immediate turn best reduces the distance.
+        # Priority:
+        # 1) If the target is clearly to our left/right (bigger horizontal gap), turn that way.
+        # 2) Otherwise, if the target is ahead (smaller row index), go forward.
+        # 3) If the target is behind or same row, we still go forward (no backward option).
+        row_diff = target_row - head_row  # negative means ahead (up)
+        col_diff = target_col - head_col  # negative means to the left, positive to the right
+
+        if abs(col_diff) > abs(row_diff):
+            # Move horizontally toward the food
+            if col_diff < 0:
+                return LEFT  # -1 (turn left)
+            elif col_diff > 0:
+                return RIGHT  #  1 (turn right)
+            else:
+                # same column, fall back to forward decision below
+                pass
+
+        # Prefer going forward when target is ahead (row_diff < 0)
+        if row_diff < 0:
+            return FORWARD  # 0 (forward)
+
+        # If food is behind or same row, we cannot go backward; keep going forward.
+        return FORWARD  # 0 (forward)
 
     def AgentFunction(self, percepts):
         '''
-         You should implement a neural network-based model here that translates from 'percepts' 
-         to 'actions' with the weights and biases coming from 'self.chromosome', and the
-         inputs to the network coming from the 'percepts' variable.
-        
-         Percepts are a 7x7 Numpy Matrix. 
+        Replaced the placeholder with a very simple "go toward food" rule.
 
-         The return value must be an integer, a choice of one of possible actions 
-         from [-1,0,1] corresponding to turning left, moving forward, and turning right.
-
-         .
-         .
-         .
-        ''' 
-
-        index = 1 # Current code always chose the action to move forward
-        return self.actions[index]
+        - Percepts are a 7x7 Numpy array aligned to the snakes heading.
+        - We look for food cells (value == -0.5) and choose an immediate action
+          that reduces the distance to the nearest food:
+            * -1 = turn left
+            *  0 = forward
+            *  1 = turn right
+        - If no food is visible, we keep moving forward.
+        '''
+        return self._choose_action_towards_food(percepts)
 
 def evalFitness(population):
 
@@ -84,6 +172,24 @@ def evalFitness(population):
 
     return fitness
 
+# -----------------------------------------------------------------------------
+# Genetic Algorithm functions
+# -----------------------------------------------------------------------------
+
+# Helper function to log average fitness - saving to a CSV file
+def saveFitnessHistory(avg_fitness):
+        '''
+        Save the average fitness of the generation to a CSV file for later analysis.
+        '''
+        _average_fitness_per_generation.append(avg_fitness)
+        try:
+            with open(fitness_history_csv_filename, "a", encoding="utf-8") as file_handle:
+                # Store "generation_index,average_fitness"
+                generation_index = len(_average_fitness_per_generation) - 1
+                file_handle.write(f"{generation_index},{avg_fitness}\n")
+        except Exception:
+            # If logging fails (e.g., no write permission), we just continue
+            pass
 
 def newGeneration(old_population):
 
@@ -124,5 +230,5 @@ def newGeneration(old_population):
 
     # At the end you need to compute the average fitness and return it along with your new population
     avg_fitness = np.mean(fitness)
-
+    saveFitnessHistory(avg_fitness)
     return (new_population, avg_fitness)

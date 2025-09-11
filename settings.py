@@ -8,7 +8,7 @@ __date__ = "August 2025s"
 game_settings = {
 
    #File implementing the agent playing as player 1
-   "player1": "random_agent.py",
+   "player1": "my_agent.py",
 
    # File implementing the agent playing as player 2
    "player2": "random_agent.py",
@@ -23,13 +23,13 @@ game_settings = {
    "nTurns": 100,
 
    # Speed of visualisation ('slow','normal','fast')
-   "visSpeed": 'normal',
+   "visSpeed": 'fast',
 
    # Visualisation resolution
    "visResolution": (720, 480),
 
    # Set to True to save tournament games
-   "saveTournamentGames": False,
+   "saveTournamentGames": True,
 
    "seed": 0   # seed for game choices, None for random seed
 }
