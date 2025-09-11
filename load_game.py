@@ -63,8 +63,8 @@ def main(argv):
        savePath = os.path.join(this_scripts_folder, "saved")
 
        # macOS-only: bring Python to the front
-       if os.uname().sysname == "Darwin":
-          macos_activate_this_process()
+    #    if os.name().sysname == "Darwin":
+    #       macos_activate_this_process()
 
        loadGame = filedialog.askopenfilename(initialdir=savePath)
 
