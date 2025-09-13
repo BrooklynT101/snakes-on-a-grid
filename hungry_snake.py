@@ -7,25 +7,14 @@ import os
 from typing import List
 from datetime import datetime
 
-agentName = "SignlePerceptronGA"
-# trainingSchedule = [("self", 1), ("random", 1)]
-# Start with random opponent only to keep things simple and fast.
-trainingSchedule = [("random", 200)]
+agentName = "HungrySnake"
+trainingSchedule = [("self", 1), ("random", 1)]
+# trainingSchedule = [("random", 200)]
 FORWARD = 0
 LEFT = -1
 RIGHT = 1
 FOOD = -0.5
 EMPTY = 0.0
-
-# -----------------------------------------------------------------------------
-# GA configuration (these values were suggested by CGPT to start with, will be adjusted later)
-# -----------------------------------------------------------------------------
-ELITISM_COUNT = 2               # Number of top snakes copied straight to next gen
-TOURNAMENT_SIZE = 3             # We pick the best of this many snakes during selection
-CROSSOVER_PROBABILITY = 0.7     # Chance we perform crossover; otherwise copy a parent
-MUTATION_PROBABILITY = 0.05     # Chance that each gene will be mutated
-MUTATION_STANDARD_DEVIATION = 0.10  # Size of the random nudge during mutation
-WEIGHT_CLIP_LIMIT = 3.0         # Keep weights within a safe range after mutation
 
 # This is to track average fitness across generations so I can plot it later
 fitness_history_csv_filename = "fitness_history.csv"
@@ -58,7 +47,64 @@ class Snake:
             size=self.chromosome_length
         ).astype(np.float32)
 
-    
+    # -------------------------------------------------------------------------
+    # Helper to choose a local action toward the nearest food
+    # -------------------------------------------------------------------------
+    def _choose_action_towards_food(self, percepts_7x7: np.ndarray) -> int:
+        """
+        Very simple rule:
+          - Find the nearest food cell (value == -0.5) in the 7x7 view.
+          - The view is aligned to the snake's heading:
+              forward = one row UP (toward smaller row index),
+              left    = one column LEFT (toward smaller column index),
+              right   = one column RIGHT (toward larger column index).
+          - We return -1 for left, 0 for forward, 1 for right.
+
+        If there is no food in view, we simply go forward (0).
+        """
+        # Head is at the center of the 7x7 grid
+        head_row = 3
+        head_col = 3
+
+        # Find all coordinates where there is food (-0.5)
+        food_positions = np.argwhere(percepts_7x7 == -0.5)
+
+        if food_positions.size == 0:
+            # No food seen in the local 7x7 view: just keep moving forward
+            return FORWARD
+
+        # Pick the nearest food by Manhattan distance in the local percept grid 
+        distances = []
+        for (r, c) in food_positions:
+            distance = abs(r - head_row) + abs(c - head_col)
+            distances.append(distance)
+        nearest_index = int(np.argmin(distances))
+        target_row, target_col = food_positions[nearest_index]
+
+        # Decide which immediate turn best reduces the distance.
+        # Priority:
+        # 1) If the target is clearly to our left/right (bigger horizontal gap), turn that way.
+        # 2) Otherwise, if the target is ahead (smaller row index), go forward.
+        # 3) If the target is behind or same row, we still go forward (no backward option).
+        row_diff = target_row - head_row  # negative means ahead (up)
+        col_diff = target_col - head_col  # negative means to the left, positive to the right
+
+        if abs(col_diff) > abs(row_diff):
+            # Move horizontally toward the food
+            if col_diff < 0:
+                return LEFT  # -1 (turn left)
+            elif col_diff > 0:
+                return RIGHT  #  1 (turn right)
+            else:
+                # same column, fall back to forward decision below
+                pass
+
+        # Prefer going forward when target is ahead (row_diff < 0)
+        if row_diff < 0:
+            return FORWARD  # 0 (forward)
+
+        # If food is behind or same row, we cannot go backward; keep going forward.
+        return FORWARD  # 0 (forward)
 
     def AgentFunction(self, percepts):
         '''
@@ -136,91 +182,15 @@ def saveFitnessHistory(avg_fitness):
             # If logging fails (e.g., no write permission), we just continue
             pass
 
-def tournament_selection(population, fitness, tournament_size):
-    '''
-    Select one parent using tournament selection.
-
-    Steps:
-      1) Randomly select 'tournament_size' individuals from the population.
-      2) Choose the one with the highest fitness among them.
-
-    Returns:
-      The selected parent (Snake instance).
-    '''
-    # Pick distict indices for the tournament
-    selected_indices = np.random.choice(len(population), size=tournament_size, replace=False)
-
-    # Find the best fitness among the population
-    best_index = selected_indices[0]
-    best_fitness = fitness[best_index]
-
-    for idx in selected_indices[1:]:
-        if fitness[idx] > best_fitness:
-            best_fitness = fitness[idx]
-            best_index = idx
-
-    return population[best_index]
-
-def one_point_crossover(parent1, parent2):
-    '''
-    Perform one-point crossover between two parents to produce a child.
-    Mixing the chromosomes of the parents to create a new chromosome for the child.
-
-    TODO: define a crossover point to tweak the child's chromosome. Rather than random
-
-    Steps:
-      1) Randomly select a crossover point along the chromosome.
-      2) Create a new child chromosome by combining genes from both parents.
-    Returns:
-      The child (Snake instance) with the new chromosome.
-    '''
-
-
 def newGeneration(old_population):
+
     '''
-    Build the next generation of snakes.
-
-    Steps:
-      1) Evaluate fitness of the old population.
-      2) Keep a few best snakes unchanged (elitism).
-      3) For the rest:
-         - Select two parents by tournament selection.
-         - Create a child using one-point crossover.
-         - Mutate the child's genes a little bit.
-      4) Call a function to log the average fitness.
-      5) Return the new population and the average fitness of the old population.
-
-    This function must return a tuple consisting of:
+     This function must return a tuple consisting of:
      - a list of the new_population of snakes that is of the same length as the old_population,
      - the average fitness of the old population
     '''
-    population_size = len(old_population)
+    N = len(old_population)
 
-    # 1) Evaluate fitness of the old population.
-    fitness_values = evalFitness(old_population)
-    if population_size == 0:
-        # Edge case: empty population, shouldnt happen but just in case
-        print("Population size is zero.")
-        return old_population, 0.0
-
-    average_fitness = float(np.mean(fitness_values))
-
-    # Record average fitness for analysis
-    saveFitnessHistory(average_fitness)
-
-    # 2) Sort snakes by fitness to find elitism candidates (descending order)
-    sorted_indices = np.argsort(fitness_values)[::-1]
-
-    # 3) Create new population list
-    new_population = List[Snake]
-
-    # 3a) Copy top ELITISM_COUNT snakes unchanged
-    for i in range(ELITISM_COUNT):
-        elite_index = sorted_indices[i]
-        elite_snake = old_population[elite_index]
-        new_population.append(elite_snake)
-
-    # 3b) Create the rest of the new population by breeding 
     nPercepts = old_population[0].nPercepts
     actions = old_population[0].actions
 
@@ -229,7 +199,7 @@ def newGeneration(old_population):
 
     # Create new population list...
     new_population = list()
-    for snake in range(population_size):
+    for n in range(N):
 
         # Create a new snake
         new_snake = Snake(nPercepts, actions)
