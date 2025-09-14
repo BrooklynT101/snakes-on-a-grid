@@ -10,6 +10,7 @@ agentName = "SinglePerceptronGA"
 # trainingSchedule = [("self", 1), ("random", 1)]
 # Start with random opponent only to keep things simple and fast.
 trainingSchedule = [("random", 200)]
+# average score after 200 games 3.76e+00
 FORWARD = 0
 LEFT = -1
 RIGHT = 1
@@ -25,6 +26,14 @@ CROSSOVER_PROBABILITY = 0.7     # Chance we perform crossover; otherwise copy a 
 MUTATION_PROBABILITY = 0.05     # Chance that each gene will be mutated
 MUTATION_STANDARD_DEVIATION = 0.10  # Size of the random nudge during mutation
 WEIGHT_CLIP_LIMIT = 3.0         # Keep weights within a safe range after mutation
+
+# -----------------------------------------------------------------------------
+# Fitness evaluation modifiers
+# -----------------------------------------------------------------------------
+FOOD_REWARD = 0.5              # Reward for eating food
+FRIEND_ATTACK_PENALTY = -0.3      # Penalty for biting a friendly snake
+ENEMY_ATTACK_REWARD = 0.3       # Reward for biting an enemy snake
+HEAD_CRASH_PENALTY = -0.2        # Penalty for crashing heads with another snake
 
 # This is to track average fitness across generations so I can plot it later
 fitness_history_csv_filename = "fitness_history.csv"
@@ -154,9 +163,19 @@ def evalFitness(population):
         maxTurns = len(snake.sizes)
 
         '''
-         This fitness functions only considers the average snake size
+         This fitness function considers;
+            - mean size of the snake during the game (the larger the better)
+            - number of food items eaten (the more the better)
+            - number of enemy snakes bitten (the more the better)
+            - number of friendly snakes bitten (the fewer the better)
+            - number of head crashes with snakes (the fewer the better) TODO: tweak this to consider friend vs enemy crashes
         '''
-        fitness[n] = meanSize
+        f = meanSize \
+            + FOOD_REWARD * np.sum(snake.food) \
+            + ENEMY_ATTACK_REWARD * np.sum(snake.enemy_attacks) \
+            + FRIEND_ATTACK_PENALTY * np.sum(snake.friend_attacks) \
+            + HEAD_CRASH_PENALTY * (np.sum(snake.friend_crashes) + np.sum(snake.enemy_crashes))
+        fitness[n] = f
 
     return fitness
 
@@ -313,8 +332,6 @@ def newGeneration(old_population):
         new_population.append(create_child(elite, elite.chromosome.copy()))
 
     # 3b) Create the rest of the new population by breeding 
-    nPercepts = old_population[0].nPercepts
-    actions = old_population[0].actions
     while len(new_population) < population_size:
         # Select two parents using tournament selection
         parent1 = tournament_selection(old_population, fitness_values, TOURNAMENT_SIZE)
@@ -329,32 +346,4 @@ def newGeneration(old_population):
         # Create a new snake with the child's chromosome
         child_snake = create_child(parent1, child_chromosome)
         new_population.append(child_snake)
-
-    # fitness = evalFitness(old_population)
-
-    # # Create new population list...
-    # new_population = list()
-    # for snake in range(population_size):
-
-    #     # Create a new snake
-    #     new_snake = Snake(nPercepts, actions)
-
-    #     '''
-    #      Here you should modify the new snakes chromosome by selecting two parents (based on their
-    #      fitness) and crossing their chromosome to overwrite new_snake.chromosome
-
-    #      Consider implementing elitism, mutation and various other
-    #      strategies for producing a new creature.
-
-    #      .
-    #      .
-    #      .
-    #     '''
-
-    #     # Add the new snake to the new population
-    #     new_population.append(new_snake)
-
-    # # At the end you need to compute the average fitness and return it along with your new population
-    # avg_fitness = np.mean(fitness)
-    # saveFitnessHistory(avg_fitness)
     return new_population, average_fitness
