@@ -11,29 +11,26 @@ agentName = "SinglePerceptronGA"
 # Start with random opponent only to keep things simple and fast.
 trainingSchedule = [("random", 200)]
 # average score after 200 games 3.76e+00
-FORWARD = 0
-LEFT = -1
-RIGHT = 1
-FOOD = -0.5
-EMPTY = 0.0
 
 # -----------------------------------------------------------------------------
-# GA configuration (these values were suggested by CGPT to start with, will be adjusted later)
+# Genetic Algorithm configuration
 # -----------------------------------------------------------------------------
-ELITISM_COUNT = 2               # Number of top snakes copied straight to next gen
-TOURNAMENT_SIZE = 3             # We pick the best of this many snakes during selection
-CROSSOVER_PROBABILITY = 0.7     # Chance we perform crossover; otherwise copy a parent
-MUTATION_PROBABILITY = 0.05     # Chance that each gene will be mutated
-MUTATION_STANDARD_DEVIATION = 0.10  # Size of the random nudge during mutation
-WEIGHT_CLIP_LIMIT = 3.0         # Keep weights within a safe range after mutation
+ELITISM_COUNT = 4                   # Number of top snakes copied straight to next                  Default  2
+TOURNAMENT_SIZE = 4                 # We pick the best of this many snakes during selection         Default  3
+CROSSOVER_PROBABILITY = 0.8         # Chance we perform crossover; otherwise copy a parent          Default  0.7
+MUTATION_PROBABILITY = 0.03         # Chance that each gene will be mutated                         Default  0.05
+MUTATION_STANDARD_DEVIATION = 0.05  # Size of the random nudge during mutation                      Default  0.10
+WEIGHT_CLIP_LIMIT = 3.0             # Keep weights within a safe range after mutation               Default  3.0
 
 # -----------------------------------------------------------------------------
 # Fitness evaluation modifiers
 # -----------------------------------------------------------------------------
-FOOD_REWARD = 0.5              # Reward for eating food
-FRIEND_ATTACK_PENALTY = -0.3      # Penalty for biting a friendly snake
-ENEMY_ATTACK_REWARD = 0.3       # Reward for biting an enemy snake
-HEAD_CRASH_PENALTY = -0.2        # Penalty for crashing heads with another snake
+FOOD_REWARD = 0.5                   # Reward for eating food,                                       Default  0.5
+FRIEND_ATTACK_PENALTY = -0.3        # Penalty for biting a friendly snake,                          Default -0.3
+ENEMY_ATTACK_REWARD = 0.3           # Reward for biting an enemy snake,                             Default  0.3
+HEAD_FRIEND_CRASH_PENALTY = -0.2    # Penalty for crashing heads with friendly snake,               Default -0.2
+HEAD_ENEMY_CRASH_PENALTY = -0.2     # Penalty for crashing heads with enemy snake,                  Default -0.2
+ALIVE_BONUS_PER_TURN = 0.02         # small survival nudge (reduces twitch)                         Default 0.02
 
 # This is to track average fitness across generations so I can plot it later
 fitness_history_csv_filename = "fitness_history.csv"
@@ -151,7 +148,7 @@ def evalFitness(population):
                               head crashes - 0 not bitten in that turn, 1 bitten enemy snake
          snake.bitten - number of bites received in a given turn (it's possible to be bitten by
                         several snakes in one turn)
-         snake.food - turns when food was eaten by the snake, not including biting other snake
+         snake.foods - turns when food was eaten by the snake, not including biting other snake
                        (0 not eaten food, food eaten)
          snake.friend_crashes - turns when crashed heads with a friendly snake (0 no crash, 1 crash) 
          snake.enemy_crashes - turns when crashed heads with an enemy snake (0 no crash, 1 crash)
@@ -171,10 +168,12 @@ def evalFitness(population):
             - number of head crashes with snakes (the fewer the better) TODO: tweak this to consider friend vs enemy crashes
         '''
         f = meanSize \
-            + FOOD_REWARD * np.sum(snake.food) \
+            + FOOD_REWARD * np.sum(snake.foods) \
             + ENEMY_ATTACK_REWARD * np.sum(snake.enemy_attacks) \
             + FRIEND_ATTACK_PENALTY * np.sum(snake.friend_attacks) \
-            + HEAD_CRASH_PENALTY * (np.sum(snake.friend_crashes) + np.sum(snake.enemy_crashes))
+            + HEAD_FRIEND_CRASH_PENALTY * np.sum(snake.friend_crashes) \
+            + HEAD_ENEMY_CRASH_PENALTY * np.sum(snake.enemy_crashes) \
+            + ALIVE_BONUS_PER_TURN * turnsAlive
         fitness[n] = f
 
     return fitness

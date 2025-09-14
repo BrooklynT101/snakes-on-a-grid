@@ -23,7 +23,7 @@ game_settings = {
    "nTurns": 100,
 
    # Speed of visualisation ('slow','normal','fast')
-   "visSpeed": 'slow',
+   "visSpeed": 'fast',
 
    # Visualisation resolution
    "visResolution": (720, 480),
@@ -31,7 +31,7 @@ game_settings = {
    # Set to True to save tournament games
    "saveTournamentGames": True,
 
-   "seed": 0   # seed for game choices, None for random seed
+   "seed": 123   # seed for game choices, None for random seed
 }
 
 if __name__ == "__main__":
