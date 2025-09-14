@@ -3,15 +3,13 @@ __organization__ = "COSC343, University of Otago"
 __email__ = "taybr713@student.otago.ac.nz"
 
 import numpy as np
-import os
 from typing import List
 from typing import Tuple
-from datetime import datetime
 
-agentName = "SignlePerceptronGA"
-# trainingSchedule = [("self", 1), ("random", 1)]
+agentName = "SinglePerceptronGA"
+trainingSchedule = [("self", 1), ("random", 1)]
 # Start with random opponent only to keep things simple and fast.
-trainingSchedule = [("random", 200)]
+# trainingSchedule = [("random", 200)]
 FORWARD = 0
 LEFT = -1
 RIGHT = 1
@@ -38,17 +36,17 @@ _average_fitness_per_generation: List[float] = []
 class Snake:    
     """
     Very small neural network ("perceptron"):
-        inputs:  49  (flattened 7x7 percept grid)
-        outputs: 3   (scores for Left, Forward, Right)
+    inputs:  49  (flattened 7x7 percept grid)
+    outputs: 3   (scores for Left, Forward, Right)
 
     Chromosome layout (length = 150):
-        - First 49*3 = 147 numbers are the weight matrix (49 rows, 3 columns) flattened
-        - Last 3 numbers are the bias vector (one bias per output)
+    - First 49*3 = 147 numbers are the weight matrix (49 rows, 3 columns) flattened
+    - Last 3 numbers are the bias vector (one bias per output)
 
     Action selection:
-        - We compute scores = x @ W + b
-        - We choose the index of the largest score (0, 1, or 2)
-        - We map indices to actions [-1, 0, 1] using the "actions" list provided by the engine
+    - We compute scores = x @ W + b
+    - We choose the index of the largest score (0, 1, or 2)
+    - We map indices to actions [-1, 0, 1] using the "actions" list provided by the engine
     """
 
     def __init__(self, nPercepts, actions):
@@ -108,11 +106,13 @@ class Snake:
           4) Return the corresponding action from self.actions ([-1, 0, 1]).
         """
         # 1) Flatten the percepts
-        flat_percepts = percepts.flatten()  # Shape (49,)
+        flat_percepts = percepts.flatten().astype(np.float32)  # Shape (49,)
         # 2) Compute the 3 output scores using y = x @ W + b.
-        output_scores = flat_percepts @ self.chromosome[:self.number_of_weights].reshape((self.number_of_inputs, self.number_of_outputs)) + self.chromosome[self.number_of_weights:]
+        W, b = self._decode_chromosome_into_weights_and_biases()
+        # output_scores = flat_percepts @ W + b  # Shape (3,)
+        output_scores = flat_percepts @ W + b  # Shape (3,)
         # 3) Pick the index of the largest score.
-        best_action_index = np.argmax(output_scores)
+        best_action_index = int(np.argmax(output_scores))
         # 4) Return the corresponding action from self.actions ([-1, 0, 1]).
         chosen_action = self.actions[best_action_index]
         return chosen_action
@@ -142,7 +142,7 @@ def evalFitness(population):
                               head crashes - 0 not bitten in that turn, 1 bitten enemy snake
          snake.bitten - number of bites received in a given turn (it's possible to be bitten by
                         several snakes in one turn)
-         snake.foods - turns when food was eaten by the snake, not including biting other snake
+         snake.food - turns when food was eaten by the snake, not including biting other snake
                        (0 not eaten food, food eaten)
          snake.friend_crashes - turns when crashed heads with a friendly snake (0 no crash, 1 crash) 
          snake.enemy_crashes - turns when crashed heads with an enemy snake (0 no crash, 1 crash)
@@ -253,7 +253,7 @@ def mutate_in_place(genes):
       - After mutation, clip values into [-weight_clip_limit, +weight_clip_limit] to keep things stable.
     Had Copilot help with the implementation of this function. Fixing some incorrect logic I had tried.
     """
-    number_of_genes = len(genes.sizes)
+    number_of_genes = genes.size
     for i in range(number_of_genes):
         if np.random.rand() < MUTATION_PROBABILITY:
             noise = np.random.normal(0, MUTATION_STANDARD_DEVIATION)
@@ -302,13 +302,15 @@ def newGeneration(old_population):
     sorted_indices = np.argsort(fitness_values)[::-1]
 
     # 3) Create new population list
-    new_population = List[Snake]
+    new_population = []
 
     # 3a) Copy top ELITISM_COUNT snakes unchanged
-    for i in range(ELITISM_COUNT):
-        elite_index = sorted_indices[i]
-        elite_snake = old_population[elite_index]
-        new_population.append(elite_snake)
+    # LLM Suggested fix for no aliasing issues
+    elites_to_copy = min(ELITISM_COUNT, population_size)
+
+    for i in range(elites_to_copy):
+        elite = old_population[sorted_indices[i]]
+        new_population.append(create_child(elite, elite.chromosome.copy()))
 
     # 3b) Create the rest of the new population by breeding 
     nPercepts = old_population[0].nPercepts
@@ -325,11 +327,7 @@ def newGeneration(old_population):
         mutate_in_place(child_chromosome)
 
         # Create a new snake with the child's chromosome
-        child_snake = Snake.create_child(
-            parent_snake=parent1,
-            chromosome=child_chromosome
-        )
-
+        child_snake = create_child(parent1, child_chromosome)
         new_population.append(child_snake)
 
     # fitness = evalFitness(old_population)
@@ -359,4 +357,4 @@ def newGeneration(old_population):
     # # At the end you need to compute the average fitness and return it along with your new population
     # avg_fitness = np.mean(fitness)
     # saveFitnessHistory(avg_fitness)
-    return (new_population, fitness_values)
+    return new_population, average_fitness

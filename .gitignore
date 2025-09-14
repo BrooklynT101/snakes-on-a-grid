@@ -208,3 +208,6 @@ __marimo__/
 
 # Snake game logfiles
 saved/*
+fitness_history.csv
+my_agent.tar.gz
+fitness_history.csv
