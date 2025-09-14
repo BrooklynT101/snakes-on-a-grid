@@ -6,7 +6,7 @@ import numpy as np
 from typing import List
 from typing import Tuple
 
-agentName = "Skirmisher"
+agentName = "FoodSeeker"
 # trainingSchedule = [("self", 1), ("random", 1)]
 # Start with random opponent only to keep things simple and fast.
 trainingSchedule = [("random", 200)]
@@ -25,12 +25,12 @@ WEIGHT_CLIP_LIMIT = 3.0             # Keep weights within a safe range after mut
 # -----------------------------------------------------------------------------
 # Fitness evaluation modifiers
 # -----------------------------------------------------------------------------
-FOOD_REWARD = 0.6                   # Reward for eating food,                                       Default  0.5
-FRIEND_ATTACK_PENALTY = -0.7        # Penalty for biting a friendly snake,                          Default -0.3
-ENEMY_ATTACK_REWARD = 0.45           # Reward for biting an enemy snake,                             Default  0.3
-HEAD_FRIEND_CRASH_PENALTY = -0.9    # Penalty for crashing heads with friendly snake,               Default -0.2
+FOOD_REWARD = 0.8                   # Reward for eating food,                                       Default  0.5
+FRIEND_ATTACK_PENALTY = -0.8        # Penalty for biting a friendly snake,                          Default -0.3
+ENEMY_ATTACK_REWARD = 0.3           # Reward for biting an enemy snake,                             Default  0.3
+HEAD_FRIEND_CRASH_PENALTY = -1.0    # Penalty for crashing heads with friendly snake,               Default -0.2
 HEAD_ENEMY_CRASH_PENALTY = -0.5     # Penalty for crashing heads with enemy snake,                  Default -0.2
-ALIVE_BONUS_PER_TURN = 0.02         # small survival nudge (reduces twitch)                         Default 0.02
+ALIVE_BONUS_PER_TURN = 0.03         # small survival nudge (reduces twitch)                         Default 0.02
 
 # This is to track average fitness across generations so I can plot it later
 fitness_history_csv_filename = "fitness_history.csv"
@@ -191,7 +191,7 @@ def saveFitnessHistory(avg_fitness):
         try:
             with open(fitness_history_csv_filename, "a", encoding="utf-8") as file_handle:
                 # Store "generation_index,average_fitness"
-                generation_index = len(_average_fitness_per_generation) - 1
+                generation_index = len(_average_fitness_per_generation)
                 file_handle.write(f"{generation_index},{avg_fitness}\n")
         except Exception:
             # If logging fails (e.g., no write permission), we just continue

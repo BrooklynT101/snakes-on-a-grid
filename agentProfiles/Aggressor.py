@@ -191,7 +191,7 @@ def saveFitnessHistory(avg_fitness):
         try:
             with open(fitness_history_csv_filename, "a", encoding="utf-8") as file_handle:
                 # Store "generation_index,average_fitness"
-                generation_index = len(_average_fitness_per_generation) - 1
+                generation_index = len(_average_fitness_per_generation)
                 file_handle.write(f"{generation_index},{avg_fitness}\n")
         except Exception:
             # If logging fails (e.g., no write permission), we just continue
