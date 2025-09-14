@@ -7,9 +7,9 @@ from typing import List
 from typing import Tuple
 
 agentName = "SinglePerceptronGA"
-trainingSchedule = [("self", 1), ("random", 1)]
+# trainingSchedule = [("self", 1), ("random", 1)]
 # Start with random opponent only to keep things simple and fast.
-# trainingSchedule = [("random", 200)]
+trainingSchedule = [("random", 200)]
 FORWARD = 0
 LEFT = -1
 RIGHT = 1
