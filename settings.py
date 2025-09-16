@@ -8,10 +8,12 @@ __date__ = "August 2025s"
 game_settings = {
 
    #File implementing the agent playing as player 1
-   "player1": "my_agent.py",
+#    "player1": "my_agent.py",
+   "player1": "Skirmisher.py",
 
    # File implementing the agent playing as player 2
-   "player2": "random_agent.py",
+#    "player2": "random_agent.py",
+   "player2": "Default.py",
 
    # Size of the game grid
    "gridSize": 50,
