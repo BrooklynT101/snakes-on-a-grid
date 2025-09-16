@@ -7,7 +7,7 @@ from typing import List
 from typing import Tuple
 
 agentName = "Skirmisher"
-trainingSchedule = [("random", 500)]
+trainingSchedule = [("random", 200)]
 
 # -----------------------------------------------------------------------------
 # Genetic Algorithm configuration
