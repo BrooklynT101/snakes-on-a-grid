@@ -9,7 +9,7 @@ from typing import Tuple
 agentName = "Skirmisher"
 # trainingSchedule = [("self", 1), ("random", 1)]
 # Start with random opponent only to keep things simple and fast.
-trainingSchedule = [("random", 200)]
+trainingSchedule = [("random", 500)]
 # average score after 200 games 3.76e+00
 
 # -----------------------------------------------------------------------------
