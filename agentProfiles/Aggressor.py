@@ -25,6 +25,7 @@ WEIGHT_CLIP_LIMIT = 3.0             # Keep weights within a safe range after mut
 # -----------------------------------------------------------------------------
 # Fitness evaluation modifiers
 # -----------------------------------------------------------------------------
+# Intent: balanced rewards/penalties
 FOOD_REWARD = 0.5                   # Reward for eating food,                                       Default  0.5
 FRIEND_ATTACK_PENALTY = -0.7        # Penalty for biting a friendly snake,                          Default -0.3
 ENEMY_ATTACK_REWARD = 0.6           # Reward for biting an enemy snake,                             Default  0.3

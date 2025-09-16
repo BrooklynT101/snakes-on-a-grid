@@ -25,12 +25,14 @@ WEIGHT_CLIP_LIMIT = 3.0             # Keep weights within a safe range after mut
 # -----------------------------------------------------------------------------
 # Fitness evaluation modifiers
 # -----------------------------------------------------------------------------
-FOOD_REWARD = 0.8                   # Reward for eating food,                                       Default  0.5
-FRIEND_ATTACK_PENALTY = -0.8        # Penalty for biting a friendly snake,                          Default -0.3
-ENEMY_ATTACK_REWARD = 0.3           # Reward for biting an enemy snake,                             Default  0.3
-HEAD_FRIEND_CRASH_PENALTY = -1.0    # Penalty for crashing heads with friendly snake,               Default -0.2
-HEAD_ENEMY_CRASH_PENALTY = -0.5     # Penalty for crashing heads with enemy snake,                  Default -0.2
-ALIVE_BONUS_PER_TURN = 0.03         # small survival nudge (reduces twitch)                         Default 0.02
+# Intent: strong rewards for food,
+# strong penalties for risky behaviour
+FOOD_REWARD = 0.8                       # Reward for eating food,                                       Default  0.5
+FRIEND_ATTACK_PENALTY = -0.8            # Penalty for biting a friendly snake,                          Default -0.3
+ENEMY_ATTACK_REWARD = 0.3               # Reward for biting an enemy snake,                             Default  0.3
+HEAD_FRIEND_CRASH_PENALTY = -1.0        # Penalty for crashing heads with friendly snake,               Default -0.2
+HEAD_ENEMY_CRASH_PENALTY = -0.5         # Penalty for crashing heads with enemy snake,                  Default -0.2
+ALIVE_BONUS_PER_TURN = 0.03             # small survival nudge (reduces twitch)                         Default 0.02
 
 # This is to track average fitness across generations so I can plot it later
 fitness_history_csv_filename = "fitness_history.csv"

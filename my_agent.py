@@ -7,10 +7,7 @@ from typing import List
 from typing import Tuple
 
 agentName = "Skirmisher"
-# trainingSchedule = [("self", 1), ("random", 1)]
-# Start with random opponent only to keep things simple and fast.
 trainingSchedule = [("random", 500)]
-# average score after 200 games 3.76e+00
 
 # -----------------------------------------------------------------------------
 # Genetic Algorithm configuration
@@ -25,9 +22,11 @@ WEIGHT_CLIP_LIMIT = 3.0             # Keep weights within a safe range after mut
 # -----------------------------------------------------------------------------
 # Fitness evaluation modifiers
 # -----------------------------------------------------------------------------
+# Intent: moderate rewards, stronger 
+# penalties to encourage survival
 FOOD_REWARD = 0.6                   # Reward for eating food,                                       Default  0.5
 FRIEND_ATTACK_PENALTY = -0.7        # Penalty for biting a friendly snake,                          Default -0.3
-ENEMY_ATTACK_REWARD = 0.45           # Reward for biting an enemy snake,                             Default  0.3
+ENEMY_ATTACK_REWARD = 0.45          # Reward for biting an enemy snake,                             Default  0.3
 HEAD_FRIEND_CRASH_PENALTY = -0.9    # Penalty for crashing heads with friendly snake,               Default -0.2
 HEAD_ENEMY_CRASH_PENALTY = -0.5     # Penalty for crashing heads with enemy snake,                  Default -0.2
 ALIVE_BONUS_PER_TURN = 0.02         # small survival nudge (reduces twitch)                         Default 0.02
